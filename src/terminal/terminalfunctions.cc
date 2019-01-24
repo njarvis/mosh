@@ -598,6 +598,13 @@ void Dispatcher::OSC_dispatch( const Parser::OSC_End *act __attribute((unused)),
       Terminal::Framebuffer::title_type clipboard(
               OSC_string.begin() + 5, OSC_string.end() );
       fb->set_clipboard( clipboard );
+  /* handle osc iterm sequences starting with 1337; */
+  } else if ( OSC_string.size() >= 5 && OSC_string[ 0 ] == L'1' &&
+       OSC_string[ 1 ] == L'3' && OSC_string[ 2 ] == L'3' &&
+       OSC_string[ 3 ] == L'7' && OSC_string[ 4 ] == L';') {
+      Terminal::Framebuffer::title_type iterm(
+              OSC_string.begin() + 5, OSC_string.end() );
+      fb->set_iterm( iterm );
   /* handle osc terminal title sequence */
   } else if ( OSC_string.size() >= 1 ) {
     long cmd_num = -1;

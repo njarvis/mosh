@@ -122,6 +122,23 @@ std::string Display::new_frame( bool initialized, const Framebuffer &last, const
     frame.append( '\007' );
   }
 
+  /* iterms OSC sequences? */
+  if (f.get_iterms() != frame.last_frame.get_iterms()) {
+    const Framebuffer::iterms_type &iterms( f.get_iterms() );
+    for ( Framebuffer::iterms_type::const_iterator it = iterms.begin();
+	  it != iterms.end();
+	  it++ ) {
+      const title_type &iterm( *it );
+      frame.append( "\033]1337;" );
+      for ( title_type::const_iterator i = iterm.begin();
+	    i != iterm.end();
+	    i++ ) {
+	frame.append( *i );
+      }
+      frame.append( '\007' );
+    }
+  }
+
   /* has reverse video state changed? */
   if ( (!initialized)
        || (f.ds.reverse_video != frame.last_frame.ds.reverse_video) ) {
