@@ -125,17 +125,38 @@ std::string Display::new_frame( bool initialized, const Framebuffer &last, const
   /* iterms OSC sequences? */
   if (f.get_iterms() != frame.last_frame.get_iterms()) {
     const Framebuffer::iterms_type &iterms( f.get_iterms() );
+    const Framebuffer::iterms_type &last_iterms( frame.last_frame.get_iterms() );
+    
     for ( Framebuffer::iterms_type::const_iterator it = iterms.begin();
 	  it != iterms.end();
 	  it++ ) {
-      const title_type &iterm( *it );
-      frame.append( "\033]1337;" );
-      for ( title_type::const_iterator i = iterm.begin();
-	    i != iterm.end();
-	    i++ ) {
-	frame.append( *i );
+      const title_type &key( it->first );
+      const title_type &value( it->second );
+      bool emit = false;
+
+      // Persistent rendering key
+      if (last_iterms.find( key ) == last_iterms.end()) {
+	// First rendering
+	emit = true;
+      } else {
+	// Changed rendering
+	emit = (value != last_iterms.at(key));
       }
-      frame.append( '\007' );
+	
+      if (emit) {
+	frame.append( "\033]1337;" );
+	for ( title_type::const_iterator i = key.begin();
+	      i != key.end();
+	      i++ ) {
+	  frame.append( *i );
+	}
+	for ( title_type::const_iterator i = value.begin();
+	      i != value.end();
+	      i++ ) {
+	  frame.append( *i );
+	}
+	frame.append( "\007" );
+      }
     }
   }
 

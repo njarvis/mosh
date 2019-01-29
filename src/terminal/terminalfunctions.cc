@@ -588,6 +588,10 @@ static void CSI_DECSTR( Framebuffer *fb, Dispatcher *dispatch __attribute((unuse
 
 static Function func_CSI_DECSTR( CSI, "!p", CSI_DECSTR );
 
+static Terminal::Framebuffer::title_type build_title_type( std::string s ) {
+  return Terminal::Framebuffer::title_type(s.begin(), s.end());
+}
+
 /* xterm uses an Operating System Command to set the window title */
 void Dispatcher::OSC_dispatch( const Parser::OSC_End *act __attribute((unused)), Framebuffer *fb )
 {
@@ -602,9 +606,54 @@ void Dispatcher::OSC_dispatch( const Parser::OSC_End *act __attribute((unused)),
   } else if ( OSC_string.size() >= 5 && OSC_string[ 0 ] == L'1' &&
        OSC_string[ 1 ] == L'3' && OSC_string[ 2 ] == L'3' &&
        OSC_string[ 3 ] == L'7' && OSC_string[ 4 ] == L';') {
-      Terminal::Framebuffer::title_type iterm(
-              OSC_string.begin() + 5, OSC_string.end() );
-      fb->set_iterm( iterm );
+      // Split sequence into name and key/value
+      //   Sequence                name   key           value
+      //   --------------------------------------------------------
+      //   Name                    Name   Name    
+      //   Name=Value[=]*          Name   Name          =Value[=]*
+      //   Name=Value1=Value2[=]*  Name   Name=Value1   =Value2[=]*
+      //
+      std::reverse_iterator<std::vector<wchar_t>::iterator> scan( OSC_string.end() );
+      std::reverse_iterator<std::vector<wchar_t>::iterator> stop( OSC_string.begin() + 5 );
+  
+      // Skip backwards over any trailing '='
+      while ( scan != stop && *scan == L'=' ) scan++;
+
+      // Now find first embedded '='
+      while ( scan != stop && *scan != L'=' ) scan++;
+
+      Terminal::Framebuffer::title_type key, value, name;
+      std::vector<wchar_t>::iterator it;
+      
+      if (scan == stop) {
+	// No embedded '=', so name == key == sequence, and value is empty
+	key = Terminal::Framebuffer::title_type( OSC_string.begin() + 5, OSC_string.end() );
+	value = Terminal::Framebuffer::title_type();
+
+	it = find (OSC_string.begin() + 5, OSC_string.end(), L'=');
+	if ( it != OSC_string.end() ) {
+	  name = Terminal::Framebuffer::title_type( OSC_string.begin() + 5, it);
+	} else {
+	  name = Terminal::Framebuffer::title_type( key );
+	}
+      } else {
+	// Embedded '=', so key/value is split at the last '=' (pointed to by scan)
+	key = Terminal::Framebuffer::title_type( OSC_string.begin() + 5, scan.base());
+	value = Terminal::Framebuffer::title_type( scan.base(), OSC_string.end());
+
+	it = find (OSC_string.begin() + 5, scan.base(), L'=');
+	if ( it != scan.base() ) {
+	  name = Terminal::Framebuffer::title_type( OSC_string.begin() + 5, it);
+	} else {
+	  name = Terminal::Framebuffer::title_type( key );
+	}
+      }
+
+      // Only handle certain sequences
+      if ( ( name == build_title_type( "SetBadgeFormat" ) ) ||
+	   ( name == build_title_type( "SetUserVar" ) ) ) {
+	fb->set_iterm( key, value );
+      }
   /* handle osc terminal title sequence */
   } else if ( OSC_string.size() >= 1 ) {
     long cmd_num = -1;
