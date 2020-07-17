@@ -599,7 +599,9 @@ static int run_server( const char *desired_ip, const char *desired_port,
     Crypto::reenable_dumping_core();
 
     if ( execvp( command_path.c_str(), command_argv ) < 0 ) {
-      err( 1, "execvp: %s", command_path.c_str() );
+      warn( "execvp: %s", command_path.c_str() );
+      sleep( 3 );
+      exit( 1 );
     }
   } else {
     /* parent */
@@ -739,12 +741,11 @@ static void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &
 	    const Parser::Action &action = us.get_action( i );
 	    if ( typeid( action ) == typeid( Parser::Resize ) ) {
 	      /* apply only the last consecutive Resize action */
-	      while ( i < us.size() - 1 ) {
-		const Parser::Action &next  = us.get_action( i + 1 );
-		if ( typeid( next ) != typeid( Parser::Resize ) ) {
-		  break;
+	      if ( i < us.size() - 1 ) {
+		const Parser::Action &next = us.get_action( i + 1 );
+		if ( typeid( next ) == typeid( Parser::Resize ) ) {
+		  continue;
 		}
-		i++;
 	      }
 	      /* tell child process of resize */
 	      const Parser::Resize &res = static_cast<const Parser::Resize &>( action );
