@@ -1,5 +1,13 @@
 [![ci](https://github.com/mobile-shell/mosh/actions/workflows/ci.yml/badge.svg)](https://github.com/mobile-shell/mosh/actions/workflows/ci.yml)
 
+njarvis/mosh fork
+=================
+
+  * Add support for iterm2 OSC `1337;` sequences
+    - Does not support iterm2 OSC `133;` sequences (used for prompt marking) as Mosh doesn't honour the order of pass through text and re-rendering OSC sequences for a frame.
+  * Add support for very simple `log()` on both mosh-client and mosh-server to help debug/understand code
+    - `mosh --log ...` to enable for both client and server
+
 Mosh: the mobile shell
 ======================
 

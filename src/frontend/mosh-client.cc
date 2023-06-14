@@ -40,6 +40,7 @@
 #include "crypto.h"
 #include "locale_utils.h"
 #include "fatal_assert.h"
+#include "log.h"
 
 /* These need to be included last because of conflicting defines. */
 /*
@@ -82,7 +83,7 @@ static void print_version( FILE *file )
 static void print_usage( FILE *file, const char *argv0 )
 {
   print_version( file );
-  fprintf( file, "\nUsage: %s [-# 'ARGS'] IP PORT\n"
+  fprintf( file, "\nUsage: %s [-L] [-# 'ARGS'] IP PORT\n"
 	   "       %s -c\n", argv0, argv0 );
 }
 
@@ -108,6 +109,8 @@ int main( int argc, char *argv[] )
 #endif
 {
   unsigned int verbose = 0;
+  bool log_enabled = false;
+
   /* For security, make sure we don't dump core */
   Crypto::disable_dumping_core();
 
@@ -127,7 +130,7 @@ int main( int argc, char *argv[] )
   }
 
   int opt;
-  while ( (opt = getopt( argc, argv, "#:cv" )) != -1 ) {
+  while ( (opt = getopt( argc, argv, "#:cvL" )) != -1 ) {
     switch ( opt ) {
     case '#':
       // Ignore the original arguments to mosh wrapper
@@ -138,6 +141,9 @@ int main( int argc, char *argv[] )
       break;
     case 'v':
       verbose++;
+      break;
+    case 'L':
+      log_enabled = true;
       break;
     default:
       print_usage( stderr, argv[ 0 ] );
@@ -189,6 +195,10 @@ int main( int argc, char *argv[] )
   /* Adopt native locale */
   set_native_locale();
 
+  if (log_enabled ) {
+    log_open( "mosh-client.log" );
+  }
+  log( "starting client ip=%s, desired_port=%s\n", ip, desired_port );
   bool success = false;
   try {
     STMClient client( ip, desired_port, key.c_str(), predict_mode, verbose, predict_overwrite );
@@ -214,6 +224,8 @@ int main( int argc, char *argv[] )
     fprintf( stderr, "Error: %s\r\n", e.what() );
     success = false;
   }
+  log( "client done\n" );
+  log_close();
 
   printf( "[mosh is exiting.]\n" );
 

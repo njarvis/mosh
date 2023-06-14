@@ -83,6 +83,8 @@ my $localhost = undef;
 
 my $ssh_pty = 1;
 
+my $log = undef;
+
 my $help = undef;
 my $version = undef;
 
@@ -128,6 +130,9 @@ qq{Usage: $0 [options] [--] [user@]host [command...]
                              discovering the remote IP address to use for mosh
                              (default: "proxy")
 
+        --log                log debug information to /tmp/mosh-client.log and 
+                             /tmp/mosh-server.log
+
         --help               this message
         --version            version and copyright information
 
@@ -167,6 +172,7 @@ GetOptions( 'client=s' => \$client,
 	    'ssh-pty!' => \$ssh_pty,
 	    'init!' => \$term_init,
 	    'local' => \$localhost,
+	    'log' => \$log,
 	    'help' => \$help,
 	    'version' => \$version,
 	    'fake-proxy!' => \my $fake_proxy,
@@ -388,6 +394,10 @@ if ( $pid == 0 ) { # child
     push @server, ( '-l', $_ );
   }
 
+  if ( defined $log ) {
+      push @server, ( '-L' );
+  }
+  
   if ( scalar @command > 0 ) {
     push @server, '--', @command;
   }
@@ -462,7 +472,11 @@ if ( $pid == 0 ) { # child
   $ENV{ 'MOSH_KEY' } = $key;
   $ENV{ 'MOSH_PREDICTION_DISPLAY' } = $predict;
   $ENV{ 'MOSH_NO_TERM_INIT' } = '1' if !$term_init;
-  exec {$client} ("$client", "-# @cmdline |", $ip, $port);
+  if ( defined $log ) {
+      exec {$client} ("$client", "-L", "-# @cmdline |", $ip, $port);
+  } else {
+      exec {$client} ("$client", "-# @cmdline |", $ip, $port);
+  }
 }
 
 sub shell_quote { join ' ', map {(my $a = $_) =~ s/'/'\\''/g; "'$a'"} @_ }

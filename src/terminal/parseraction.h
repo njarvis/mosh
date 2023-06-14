@@ -37,6 +37,7 @@
 #include <vector>
 
 #include "shared.h"
+#include "log.h"
 
 namespace Terminal {
   class Emulator;
@@ -54,6 +55,14 @@ namespace Parser {
     virtual void act_on_terminal( Terminal::Emulator * ) const {};
 
     virtual bool ignore() const { return false; }
+
+    virtual void act_log( void ) {
+      if ( char_present ) {
+        log( "Action %s (0x%02x %c)\n", name().c_str(), ch, isprint( ch ) ? ch : '?' );
+      } else {
+        log( "Action %s (no char)\n", name().c_str() );
+      }
+    }
 
     Action() : ch( -1 ), char_present( false ) {};
     virtual ~Action() {};

@@ -88,6 +88,7 @@
 #include "select.h"
 #include "timestamp.h"
 #include "fatal_assert.h"
+#include "log.h"
 
 #ifndef _PATH_BSHELL
 #define _PATH_BSHELL "/bin/sh"
@@ -119,7 +120,7 @@ static void print_version( FILE *file )
 
 static void print_usage( FILE *stream, const char *argv0 )
 {
-  fprintf( stream, "Usage: %s new [-s] [-v] [-i LOCALADDR] [-p PORT[:PORT2]] [-c COLORS] [-l NAME=VALUE] [-- COMMAND...]\n", argv0 );
+  fprintf( stream, "Usage: %s new [-s] [-v] [-i LOCALADDR] [-p PORT[:PORT2]] [-c COLORS] [-l NAME=VALUE] [-L] [-- COMMAND...]\n", argv0 );
 }
 
 static bool print_motd( const char *filename );
@@ -185,6 +186,7 @@ int main( int argc, char *argv[] )
   unsigned int verbose = 0; /* don't close stdin/stdout/stderr */
   /* Will cause mosh-server not to correctly detach on old versions of sshd. */
   list<string> locale_vars;
+  bool log_enabled = false;
 
   /* strip off command */
   for ( int i = 1; i < argc; i++ ) {
@@ -210,7 +212,7 @@ int main( int argc, char *argv[] )
        && (strcmp( argv[ 1 ], "new" ) == 0) ) {
     /* new option syntax */
     int opt;
-    while ( (opt = getopt( argc - 1, argv + 1, "@:i:p:c:svl:" )) != -1 ) {
+    while ( (opt = getopt( argc - 1, argv + 1, "@:i:p:c:svl:L" )) != -1 ) {
       switch ( opt ) {
 	/*
 	 * This undocumented option does nothing but eat its argument.
@@ -251,6 +253,9 @@ int main( int argc, char *argv[] )
       case 'l':
 	locale_vars.push_back( string( optarg ) );
 	break;
+      case 'L':
+        log_enabled = true;
+        break;
       default:
 	/* don't die on unknown options */
 	print_usage( stderr, argv[ 0 ] );
@@ -283,6 +288,9 @@ int main( int argc, char *argv[] )
   #ifdef HAVE_SYSLOG
   openlog(argv[0], LOG_PID | LOG_NDELAY, LOG_AUTH);
   #endif
+  if ( log_enabled ) {
+    log_open( "mosh-server.log" );
+  }
 
   /* Get shell */
   char *my_argv[ 2 ];
@@ -667,13 +675,16 @@ static void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &
   socklen_t saved_addr_len = 0;
   #endif
 
-  #ifdef HAVE_SYSLOG
   struct passwd *pw = getpwuid( getuid() );
   if (pw == NULL) {
     throw NetworkException( std::string( "serve: getpwuid: " ) + strerror( errno ), 0 );
   }
+
+  #ifdef HAVE_SYSLOG
   syslog(LOG_INFO, "user %s session begin", pw->pw_name);
   #endif
+
+  log( "user %s session begin\n", pw->pw_name );
 
   bool child_released = false;
 
@@ -773,7 +784,7 @@ static void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &
 	  if ( !network.shutdown_in_progress() ) {
 	    network.set_current_state( terminal );
 	  }
-	  #if defined(HAVE_SYSLOG) || defined(HAVE_UTEMPTER)
+	  #if defined(HAVE_UTEMPTER)
 	  #ifdef HAVE_UTEMPTER
 	  if (!connected_utmp) {
 	    force_connection_change_evt = true;
@@ -816,6 +827,7 @@ static void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &
 	    #ifdef HAVE_SYSLOG
 	    syslog(LOG_INFO, "user %s connected from host: %s", pw->pw_name, host);
 	    #endif
+            log( "user %s connected from host: %s\n", pw->pw_name, host);
 	  }
 	  #endif
 
@@ -933,6 +945,8 @@ static void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &
   #ifdef HAVE_SYSLOG
   syslog(LOG_INFO, "user %s session end", pw->pw_name);
   #endif
+  log( "user %s session end\n", pw->pw_name);
+  log_close();
 }
 
 /* Print the motd from a given file, if available */

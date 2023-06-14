@@ -41,6 +41,7 @@
 #include <deque>
 #include <string>
 #include <list>
+#include <map>
 
 #include "shared.h"
 
@@ -372,6 +373,8 @@ namespace Terminal {
     // * If no row is shared, the frame has not been modified.
   public:
     typedef std::vector<wchar_t> title_type;
+    typedef std::map<title_type,title_type> iterm_map_type;
+
     typedef shared_ptr<Row> row_pointer;
     typedef std::vector<row_pointer> rows_type; /* can be either std::vector or std::deque */
 
@@ -380,6 +383,7 @@ namespace Terminal {
     title_type icon_name;
     title_type window_title;
     title_type clipboard;
+    iterm_map_type iterm_map;
     unsigned int bell_count;
     bool title_initialized; /* true if the window title has been set via an OSC */
 
@@ -453,9 +457,11 @@ namespace Terminal {
     void set_icon_name( const title_type &s ) { icon_name = s; }
     void set_window_title( const title_type &s ) { window_title = s; }
     void set_clipboard( const title_type &s ) { clipboard = s; }
+    void set_iterm( const title_type &k, const title_type &v ) { iterm_map[k] = v; }
     const title_type & get_icon_name( void ) const { return icon_name; }
     const title_type & get_window_title( void ) const { return window_title; }
     const title_type & get_clipboard( void ) const { return clipboard; }
+    const iterm_map_type & get_iterm_map( void ) const { return iterm_map; }
 
     void prefix_window_title( const title_type &s );
 
@@ -469,7 +475,7 @@ namespace Terminal {
 
     bool operator==( const Framebuffer &x ) const
     {
-      return ( rows == x.rows ) && ( window_title == x.window_title ) && ( clipboard  == x.clipboard ) && ( bell_count == x.bell_count ) && ( ds == x.ds );
+      return ( rows == x.rows ) && ( window_title == x.window_title ) && ( clipboard  == x.clipboard ) && ( iterm_map == x.iterm_map ) && ( bell_count == x.bell_count ) && ( ds == x.ds );
     }
   };
 }

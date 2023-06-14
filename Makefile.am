@@ -44,6 +44,8 @@ VERSION:
 		mv -f VERSION.dist VERSION; \
 	fi
 	@rm -f VERSION.dist VERSION.git
+	@cat VERSION | xargs printf "%s(NJ)\n" > VERSION.extend
+	@mv VERSION.extend VERSION
 
 clean-local:
 	@rm -rf VERSION cov-int mosh-coverity.txz compile_commands.json

@@ -54,6 +54,19 @@ void Parser::Parser::input( wchar_t ch, Actions &ret )
 {
   Transition tx = state->input( ch );
 
+  char c;
+  if ( ( ch >= 0x20 ) && ( ch <= 0x7e ) ) {
+    c = (char) ch;
+  } else {
+    c = '?';
+  }
+
+  if ( tx.next_state != NULL ) {
+    log( "%s : %c[%02x] -> %s -> %s\n", state->name().c_str(), c, ch, tx.action->name().c_str(), tx.next_state->name().c_str() );
+  } else {
+    log( "%s : %c[%02x] -> %s\n", state->name().c_str(), c, ch, tx.action->name().c_str() );
+  }
+
   if ( tx.next_state != NULL ) {
     append_or_delete( state->exit(), ret );
   }

@@ -35,6 +35,7 @@
 #include <stdlib.h>
 
 #include "terminalframebuffer.h"
+#include "log.h"
 
 using namespace Terminal;
 
@@ -78,7 +79,7 @@ DrawState::DrawState( int s_width, int s_height )
 }
 
 Framebuffer::Framebuffer( int s_width, int s_height )
-  : rows(), icon_name(), window_title(), clipboard(), bell_count( 0 ), title_initialized( false ), ds( s_width, s_height )
+  : rows(), icon_name(), window_title(), clipboard(), iterm_map(), bell_count( 0 ), title_initialized( false ), ds( s_width, s_height )
 {
   assert( s_height > 0 );
   assert( s_width > 0 );
@@ -89,7 +90,7 @@ Framebuffer::Framebuffer( int s_width, int s_height )
 
 Framebuffer::Framebuffer( const Framebuffer &other )
   : rows( other.rows ), icon_name( other.icon_name ), window_title( other.window_title ),
-    clipboard( other.clipboard ), bell_count( other.bell_count ),
+    clipboard( other.clipboard ), iterm_map( other.iterm_map ), bell_count( other.bell_count ),
     title_initialized( other.title_initialized ), ds( other.ds )
 {
 }
@@ -101,6 +102,7 @@ Framebuffer & Framebuffer::operator=( const Framebuffer &other )
     icon_name =  other.icon_name;
     window_title = other.window_title;
     clipboard = other.clipboard;
+    iterm_map = other.iterm_map;
     bell_count = other.bell_count;
     title_initialized = other.title_initialized;
     ds = other.ds;
@@ -384,6 +386,7 @@ void Framebuffer::reset( void )
   rows = rows_type( height, newrow() );
   window_title.clear();
   clipboard.clear();
+  iterm_map.clear();
   /* do not reset bell_count */
 }
 

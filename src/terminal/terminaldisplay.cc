@@ -34,6 +34,7 @@
 
 #include "terminaldisplay.h"
 #include "terminalframebuffer.h"
+#include "log.h"
 
 using namespace Terminal;
 
@@ -120,6 +121,46 @@ std::string Display::new_frame( bool initialized, const Framebuffer &last, const
       frame.append( *i );
     }
     frame.append( '\007' );
+  }
+
+  /* iterm OSC sequences? */
+  const Framebuffer::iterm_map_type &iterm_map( f.get_iterm_map() );
+  const Framebuffer::iterm_map_type &last_iterm_map( frame.last_frame.get_iterm_map() );
+
+  for ( Framebuffer::iterm_map_type::const_iterator it = iterm_map.begin();
+        it != iterm_map.end();
+        it++ ) {
+    const title_type &key( it->first );
+    const title_type &value( it->second );
+    bool emit = false;
+
+    LOG_DUMP_VECTOR( key );
+    LOG_DUMP_VECTOR( value );
+
+    if (last_iterm_map.find( key ) == last_iterm_map.end()) {
+      // First rendering
+      emit = true;
+    } else {
+      // Changed rendering?
+      const title_type &old_value( last_iterm_map.at(key) );
+      emit = (value != old_value);
+    }
+
+    if (emit) {
+      log( "emitting iterm OSC: %s%s\n", key_str, value_str );
+      frame.append( "\033]" );
+      for ( title_type::const_iterator i = key.begin();
+            i != key.end();
+            i++ ) {
+        frame.append( *i );
+      }
+      for ( title_type::const_iterator i = value.begin();
+            i != value.end();
+            i++ ) {
+        frame.append( *i );
+      }
+      frame.append( "\007" );
+    }
   }
 
   /* has reverse video state changed? */

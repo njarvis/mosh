@@ -33,6 +33,7 @@
 #include "parserstate.h"
 #include "parserstatefamily.h"
 #include "shared.h"
+#include "log.h"
 
 using namespace Parser;
 

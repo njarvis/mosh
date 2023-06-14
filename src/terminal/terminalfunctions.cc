@@ -38,6 +38,7 @@
 #include "terminaldispatcher.h"
 #include "terminalframebuffer.h"
 #include "parseraction.h"
+#include "log.h"
 
 using namespace Terminal;
 
@@ -598,6 +599,82 @@ void Dispatcher::OSC_dispatch( const Parser::OSC_End *act __attribute((unused)),
       Terminal::Framebuffer::title_type clipboard(
               OSC_string.begin() + 5, OSC_string.end() );
       fb->set_clipboard( clipboard );
+  /* handle osc iterm sequences starting with 133; */
+  } else if ( OSC_string.size() >= 4 && OSC_string[ 0 ] == L'1' &&
+       OSC_string[ 1 ] == L'3' && OSC_string[ 2 ] == L'3' &&
+       OSC_string[ 3 ] == L';') {
+      LOG_DUMP_VECTOR( OSC_string );
+      log( "parsing iterm2 OSC: %s\n", OSC_string_str );
+  /* handle osc iterm sequences starting with 1337; */
+  } else if ( OSC_string.size() >= 5 && OSC_string[ 0 ] == L'1' &&
+       OSC_string[ 1 ] == L'3' && OSC_string[ 2 ] == L'3' &&
+       OSC_string[ 3 ] == L'7' && OSC_string[ 4 ] == L';') {
+      // Split sequence into name and key/value
+      //   Sequence                        name   key                 value
+      //   -----------------------------------------------------------------------------
+      //   1337;Name                       Name   1337;Name
+      //   1337;Name=Value[=]*             Name   1337;Name=          Value[=]*
+      //   1337;Name=Value1=Value2[=]*     Name   1337;Name=Value1=   Value2[=]*
+      //   1337;Name=Value1;subName=Value2 Name   1337;Name=          Value1;subName=Value2
+      //
+      LOG_DUMP_VECTOR( OSC_string );
+      log( "parsing iterm2 OSC: %s\n", OSC_string_str );
+      Terminal::Framebuffer::title_type key, value, name;
+
+      std::vector<wchar_t>::iterator it;
+      it = find (OSC_string.begin() + 5, OSC_string.end(), L'=');
+      if ( it == OSC_string.end() ) {
+        // No embedded '=', so name == sequence, and value is empty
+        name = Terminal::Framebuffer::title_type( OSC_string.begin() + 5, OSC_string.end() );
+        value = Terminal::Framebuffer::title_type();
+        key = Terminal::Framebuffer::title_type( OSC_string.begin(), OSC_string.end() );
+      } else {
+        name = Terminal::Framebuffer::title_type( OSC_string.begin() + 5, it);
+
+        // Move after the found '='
+        it++;
+
+        std::reverse_iterator<std::vector<wchar_t>::iterator> scan( OSC_string.end() );
+        std::reverse_iterator<std::vector<wchar_t>::iterator> stop( OSC_string.begin() + 5);
+
+        // Skip backwards over any trailing '=' (due to base64 encoding)
+        while ( scan != stop && *scan == L'=' ) scan++;
+
+        // Now find last embedded '='
+        while ( scan != stop && *scan != L'=' ) scan++;
+
+        if ( distance( it, scan.base() ) == 0 ) {
+          // Name=Value[=]*  it->Value[=]*
+          //  key = 1337;Name=
+          //  value = Value[=]*
+          key = Terminal::Framebuffer::title_type( OSC_string.begin(), it );  // Include '=' in key
+          value = Terminal::Framebuffer::title_type( it, OSC_string.end());
+        } else {
+          std::vector<wchar_t>::iterator colonIt;
+          colonIt = find (it, scan.base(), L';' );
+          if ( colonIt == scan.base() ) {
+            // Name=Value1=Value2[=]*      it->Value1=Value2[=]*
+            //  key = 1337;Name=Value1=
+            //  value = Value2[=]*
+            it = find (it, OSC_string.end(), L'=');
+            it++;
+            key = Terminal::Framebuffer::title_type( OSC_string.begin(), it );  // Include '=' in key
+            value = Terminal::Framebuffer::title_type( it, OSC_string.end());
+          } else {
+            // Name=Value1;subName=Value2  it->Value1;subName=Value2
+            //  key = 1337;Name=
+            //  value = Value1;subName=Value2
+            key = Terminal::Framebuffer::title_type( OSC_string.begin(), it );  // Include '=' in key
+            value = Terminal::Framebuffer::title_type( it, OSC_string.end());
+          }
+        }
+      }
+
+      LOG_DUMP_VECTOR( name );
+      LOG_DUMP_VECTOR( key );
+      LOG_DUMP_VECTOR( value );
+      //log( " name='%s', key='%s', value='%s'\n", name_str, key_str, value_str );
+      fb->set_iterm( key, value );
   /* handle osc terminal title sequence */
   } else if ( OSC_string.size() >= 1 ) {
     long cmd_num = -1;
