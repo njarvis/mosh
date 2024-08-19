@@ -50,6 +50,8 @@ private:
   Transition anywhere_rule( wchar_t ch ) const;
 
 public:
+  virtual std::string name( void ) const = 0;
+
   void setfamily( StateFamily* s_family ) { family = s_family; }
   Transition input( wchar_t ch ) const;
   virtual ActionPointer enter( void ) const { return std::make_shared<Ignore>(); }

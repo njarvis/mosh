@@ -35,7 +35,7 @@ OCLINT_OPTIONS = -enable-global-analysis -max-priority-2=1000 -max-priority-3=10
 
 VERSION.stamp:
 	@echo @PACKAGE_STRING@ > VERSION.dist
-	@set -e; if git describe --dirty --always > VERSION.git 2>&1 && \
+	@set -e; if git describe --dirty=-NJ --always > VERSION.git 2>&1 && \
 		[ -z `git rev-parse --show-prefix` ]; then \
 		if ! diff -q VERSION.git VERSION.stamp > /dev/null 2>&1; then \
 			mv -f VERSION.git VERSION.stamp; \

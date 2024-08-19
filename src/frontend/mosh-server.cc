@@ -710,11 +710,11 @@ static void serve( int host_fd,
   socklen_t saved_addr_len = 0;
 #endif
 
-#ifdef HAVE_SYSLOG
   struct passwd* pw = getpwuid( getuid() );
   if ( pw == NULL ) {
     throw NetworkException( std::string( "serve: getpwuid: " ) + strerror( errno ), 0 );
   }
+#ifdef HAVE_SYSLOG
   syslog( LOG_INFO, "user %s session begin", pw->pw_name );
 #endif
 
